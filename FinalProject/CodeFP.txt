@@ -1,0 +1,891 @@
+//programs.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace FinalProject
+{
+    static class Program
+    {
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new fLogin());
+        }
+    }
+}
+
+
+
+
+
+
+//login.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+
+namespace FinalProject
+{
+    public partial class fLogin : Form
+    {
+        public fLogin()
+        {
+            InitializeComponent();
+        }
+
+        
+
+        SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1");
+
+        // Declare the public static variable to store the userID
+        public static int UserID { get; set; }
+        public static int RoleID { get; set; }
+
+
+        private void txtUser_TextChanged(object sender, EventArgs e)
+        {
+           
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Set the UserID property
+            string userName = txtUser.Text;
+            string password = txtPass.Text;
+
+            // Perform authentication and retrieve the user ID from the database
+            int userID = RetrieveUserIDFromDatabase(userName, password);
+
+            // Assign the retrieved user ID to the public variable
+            UserID = userID;
+
+            // Perform authentication and retrieve the user ID from the database
+            int roleID = GetRoleIDFromDatabase(userName, password);
+
+            // Assign the retrieved role ID to the public variable
+            RoleID = roleID;
+
+            // SQL query to retrieve user information based on the provided username and password
+            string query = $"SELECT RoleID FROM Users WHERE UserName = '{userName}' AND Password = '{password}'";
+
+            // Create a SqlConnection object
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                try
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    // Create a SqlCommand object with the query and connection
+                    using (SqlCommand command = new SqlCommand(query, connection))
+                    {
+                        // Execute the query and retrieve the data
+                        object result = command.ExecuteScalar();
+
+                        if (result != null)
+                        {
+                            int UserID = Convert.ToInt32(result);
+                            int RoleID = Convert.ToInt32(result);
+
+                            // Open the fUser form for all role IDs
+                            fUser userForm = new fUser();
+                            userForm.Show();
+
+                            // Hide the login form (optional)
+                            this.Hide();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Invalid username or password.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred: " + ex.Message);
+                }
+            }
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void fLogin_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private int RetrieveUserIDFromDatabase(string userName, string password)
+        {
+            int userID = 0;
+
+            string query = $"SELECT userID FROM Users WHERE userName = '{userName}'";
+
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserName", userName);
+
+                    var result = command.ExecuteScalar();
+                    if (result != null && int.TryParse(result.ToString(), out int parsedUserID))
+                    {
+                        userID = parsedUserID;
+                    }
+                }
+            }
+            return userID;
+        }
+
+        private int GetRoleIDFromDatabase(string userName, string password)
+        {
+            int roleID = 0;
+           
+            string query = $"SELECT roleID FROM Users WHERE userName = '{userName}'";
+
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                connection.Open();
+                SqlCommand command = new SqlCommand(query, connection);
+                object result = command.ExecuteScalar();
+
+                if (result != null && int.TryParse(result.ToString(), out int parsedRoleID))
+                {
+                    roleID = parsedRoleID;
+                }
+            }
+
+            return roleID;
+        }
+
+    }
+}
+
+
+
+
+
+
+
+
+//user.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace FinalProject
+{
+    public partial class fUser : Form
+    {
+        public fUser()
+        {
+            InitializeComponent();
+        }
+
+        private bool CanBorrowMoreBooks()
+        {
+            int userID = fLogin.UserID; // Get the user ID from the fLogin form's public variable
+
+            string query = $"SELECT COUNT(*) FROM LendBook WHERE userID = {userID} AND retDate IS NULL";
+            int booksBorrowed;
+
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                connection.Open();
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    booksBorrowed = (int)command.ExecuteScalar();
+                }
+            }
+
+            return booksBorrowed < 2;
+        }
+
+        SqlConnection con = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1");
+
+        private void Student_Load(object sender, EventArgs e)
+        {
+            
+        }
+
+
+
+        private void btnBack_Click(object sender, EventArgs e)
+        {
+            // Go back to Login Form
+            fLogin loginForm = new fLogin();
+            loginForm.Show();
+
+            // Hide the login form
+            this.Hide();
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Get the userID from the UserID property
+            int userID = fLogin.UserID;
+
+            // SQL query
+            string query = "SELECT Users.userID, Users.userName, Users.Address, Book.bookID, Book.bookName, LendBook.borDate, LendBook.retDate " +
+                           "FROM Users " +
+                           "JOIN LendBook ON Users.UserID = LendBook.userID " +
+                           "JOIN Book ON LendBook.bookID = Book.bookID" +
+                           $" WHERE Users.userID = {userID} AND retDate = NULL" ;
+
+            // Create a SqlConnection object
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                try
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    // Create a SqlCommand object with the query and connection
+                    using (SqlCommand command = new SqlCommand(query, connection))
+                    {
+                        // Create a DataTable to hold the query results
+                        DataTable dt = new DataTable();
+                        dt.Load(command.ExecuteReader());
+
+                        // Display the results in the data grid view
+                        dataGStu.DataSource = dt;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred: " + ex.Message);
+                }
+            }
+        }
+
+        private void txtStuQ_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            //Create instance for Login form
+            fLogin loginForm = new fLogin();
+            // Get the userID from the UserID property
+            int userID = fLogin.UserID;
+
+            DateTime currentDate = DateTime.Now;
+
+            // SQL query
+            string query = "SELECT Users.userID, Users.userName, Users.Address, Book.bookID, Book.bookName, LendBook.borDate, LendBook.retDate " +
+                           "FROM Users, LendBook, Book " +
+                           "WHERE Users.userID = LendBook.userID " +
+                           "AND LendBook.bookID = Book.bookID " +
+                           $"AND (DATEDIFF(DAY, LendBook.borDate, LendBook.retDate) >= 14 OR DATEDIFF(DAY, LendBook.borDate, GETDATE()) >= 14) " +
+                           $"AND Users.userID = {userID}";
+
+            // Create a SqlConnection object
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                try
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    // Create a SqlCommand object with the query and connection
+                    using (SqlCommand command = new SqlCommand(query, connection))
+                    {
+                        // Create a DataTable to hold the query results
+                        DataTable dt = new DataTable();
+                        dt.Load(command.ExecuteReader());
+
+                        // Display the results in the data grid view
+                        dataGStu.DataSource = dt;
+
+                        // Calculate and display the fine
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            DateTime borDate = Convert.ToDateTime(row["borDate"]);
+                            int dateDiff = (int)(currentDate - borDate).TotalDays;
+
+                            if (dateDiff >= 14)
+                            {
+                                int fine = dateDiff * 10;
+                                string message = $"Fine for Student ID {row["userID"]}:LKR {fine}";
+                                MessageBox.Show(message);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred: " + ex.Message);
+                }
+            }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            // Check if the user can borrow more books
+            if (!CanBorrowMoreBooks())
+            {
+                MessageBox.Show("Maximum books lent. Please return a book before borrowing another one.");
+            }
+
+            string strCat = "All";
+
+            strCat = lbCat.SelectedItem.ToString();
+
+            if (strCat == "All")
+            {
+                strCat = "%";
+            }
+
+            // SQL query
+            string query = "SELECT Book.bookID, Book.bookName, Book.cat " +
+                           "FROM Book " +
+                           "WHERE Book.bookID NOT IN (" +
+                           "    SELECT LendBook.bookID " +
+                           "    FROM LendBook WHERE LendBook.retDate IS Null" +
+                           ") AND Book.cat LIKE '%" + strCat + "%'";
+
+            // Create a SqlConnection object
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                try
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    // Create a SqlCommand object with the query and connection
+                    using (SqlCommand command = new SqlCommand(query, connection))
+                    {
+                        // Create a DataTable to hold the query results
+                        DataTable dt = new DataTable();
+                        dt.Load(command.ExecuteReader());
+
+                        // Display the results in the data grid view
+                        dataGStu.DataSource = dt;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred: " + ex.Message);
+                }
+            }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            // Create a new instance of the fStudentDetail form
+            fUserDetail studentDetailForm = new fUserDetail();
+            // Show the student detail form
+            studentDetailForm.ShowDialog();
+
+            // Hide the Student form
+            this.Hide();
+        }
+    }
+}
+
+
+
+
+
+//lends.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+using System.Globalization;
+
+namespace FinalProject
+{
+    public partial class fLend : Form
+    {
+        public fLend()
+        {
+            InitializeComponent();
+        }
+
+        private void Lend_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void UpdateRetDateInDatabase()
+        {
+            // Get the BookID and RetDate values from the form controls
+            int bookID = int.Parse(txtBIDret.Text);
+            DateTime retDate = DateTime.Parse(txtRet.Text);
+
+            // Create the SQL UPDATE statement
+            string updateQuery = $"UPDATE LendBook SET retDate = '{retDate}' WHERE bookID = {bookID} AND retDate IS NULL";
+
+            // Create a SqlConnection object
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                try
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    // Create a SqlCommand object with the update query and connection
+                    using (SqlCommand command = new SqlCommand(updateQuery, connection))
+                    {
+                        // Execute the update query
+                        command.ExecuteNonQuery();
+
+                        // Show a success message
+                        MessageBox.Show("Return updated successfully!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred: " + ex.Message);
+                }
+            }
+        }
+
+        private void btnUpdate_Click(object sender, EventArgs e)
+        {
+            UpdateRetDateInDatabase();
+
+            // Get the bookID and retDate from the text boxes
+            int bookID = int.Parse(txtBIDret.Text);
+            DateTime retDate = DateTime.Parse(txtRet.Text);
+
+            // Retrieve borDate from the LendBook table for the corresponding bookID
+            DateTime borDate = RetrieveBorDateFromDatabase(bookID);
+
+            // Calculate the difference between retDate and borDate
+            TimeSpan difference = retDate - borDate;
+            int daysDifference = (int)difference.TotalDays;
+
+            // Check if the book is overdue (more than 14 days)
+            if (daysDifference > 14)
+            {
+                // Calculate the fine
+                int fineAmount = (daysDifference - 14) * 10;
+
+                // Display the fine in a message box
+                MessageBox.Show($"Fine: LKR {fineAmount}");
+            }
+        }
+
+        private DateTime RetrieveBorDateFromDatabase(int bookID)
+        {
+            // TODO: Implement your database retrieval logic here
+            // Use your preferred method (ADO.NET, Entity Framework, etc.) to execute the query and retrieve the borDate based on the provided bookID.
+
+            // Example using ADO.NET:
+            string query = $"SELECT borDate FROM LendBook WHERE bookID = {bookID}";
+
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                connection.Open();
+                SqlCommand command = new SqlCommand(query, connection);
+                DateTime borDate = (DateTime)command.ExecuteScalar();
+                return borDate;
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string userID = txtUID.Text;
+            string bookIDText = txtBIDbor.Text;
+            string borDateText = txtBor.Text;
+
+            // Validate and parse the entered values
+            if (int.TryParse(bookIDText, out int bookID) &&
+                DateTime.TryParse(borDateText, out DateTime borDate))
+            {
+                string insertQuery = $"INSERT INTO LendBook (userID, bookID, borDate) VALUES ('{userID}', {bookID}, '{borDate.ToString("yyyy-MM-dd")}')";
+
+                using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+                {
+                    connection.Open();
+
+                    using (SqlCommand command = new SqlCommand(insertQuery, connection))
+                    {
+                        int rowsAffected = command.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            MessageBox.Show("Record inserted successfully!");
+                        }
+                        else
+                        {
+                            MessageBox.Show("Failed to insert record.");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Invalid input. Please enter valid values for BookID and Borrow Date.");
+            }
+        }
+
+        private void label3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
+
+
+
+
+
+//user details.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace FinalProject
+{
+    public partial class fUserDetail : Form
+    {
+        public fUserDetail()
+        {
+            InitializeComponent();
+        }
+
+        SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1");
+
+
+
+        private void btnStuView_Click(object sender, EventArgs e)
+        {
+
+            // Get the userID from the UserID property
+            int userID = fLogin.UserID;
+
+            // SQL query to retrieve username and address based on userID
+            string query = $"SELECT userName, Address FROM Users  WHERE Users.userID = {userID}";
+
+
+
+
+            // Create a SqlConnection object
+            using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+            {
+                try
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    // Create a SqlCommand object with the query and connection
+                    using (SqlCommand command = new SqlCommand(query, connection))
+                    {
+                        // Create a DataTable to hold the query resul=s
+                        DataTable dt = new DataTable();
+                        dt.Load(command.ExecuteReader());
+
+                        // Display the results in the data grid view
+                        dgStuUserDet.DataSource = dt;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred: " + ex.Message);
+                }
+            }
+        }
+
+        private void fStudentDetail_Load(object sender, EventArgs e)
+        {
+
+            int roleID = fLogin.RoleID;
+            // Hide btnAdvance for roleIDs 2, 3, and 4
+            if (roleID != 1)
+            {
+                btnAdvance.Visible = false;
+                bgExtra.Visible = false;
+            }
+
+
+            // Hide btnSearch for roleID 4
+            if (roleID == 4)
+            {
+                btnSearch.Visible = false;
+                
+            }
+
+        }
+
+        private void btnStuUpdate_Click(object sender, EventArgs e)
+        {
+            // Retrieve the updated name and address from the text boxes
+            string newName = txtStuUserDet.Text;
+            string newAddress = txtStuAddressDet.Text;
+            string newPassword = txtNewPassword.Text;
+
+            // Retrieve the userID from the login form
+            int userID = fLogin.UserID;
+
+            // Create the update query
+            string updateQuery = "UPDATE Users SET ";
+            List<string> updateFields = new List<string>();
+
+            // Check if the name field is not empty and add it to the update query
+            if (!string.IsNullOrEmpty(newName))
+                updateFields.Add($"userName = '{newName}'");
+
+            // Check if the address field is not empty and add it to the update query
+            if (!string.IsNullOrEmpty(newAddress))
+                updateFields.Add($"Address = '{newAddress}'");
+
+            // Check if the password field is not empty and add it to the update query
+            if (!string.IsNullOrEmpty(newPassword))
+                updateFields.Add($"password = '{newPassword}'");
+
+            // Combine the update fields into a single string
+            string updateFieldsString = string.Join(", ", updateFields);
+
+            // Check if any fields are being updated
+            if (!string.IsNullOrEmpty(updateFieldsString))
+            {
+                // Construct the final update query
+                updateQuery += updateFieldsString;
+                updateQuery += $" WHERE userID = '{userID}'";
+
+                // Create a SqlConnection object
+                using (SqlConnection connection = new SqlConnection(@"Data Source = localhost; Initial Catalog = DIPLOMA; Persist Security Info=True;User ID = sa; Password=1Secure*Password1"))
+                {
+                    try
+                    {
+                        // Open the connection
+                        connection.Open();
+
+                        // Create a SqlCommand object with the update query and connection
+                        using (SqlCommand command = new SqlCommand(updateQuery, connection))
+                        {
+                            // Execute the update query
+                            command.ExecuteNonQuery();
+
+                            // Show a success message
+                            MessageBox.Show("User data updated successfully!");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("An error occurred: " + ex.Message);
+                    }
+                }
+            }
+            else
+            {
+                // No fields to update
+                MessageBox.Show("No changes to update.");
+            }
+        }
+
+        private void btnStuBack_Click(object sender, EventArgs e)
+        {
+            // Go back to Login Form
+            fUser studentForm = new fUser();
+            studentForm.Show();
+
+            // Hide the User Details form
+            this.Hide();
+        }
+
+        private void btnAdvance_Click(object sender, EventArgs e)
+        {
+            // Go back to Librarian Form
+            fAdvanced librarianForm = new fAdvanced();
+            librarianForm.Show();
+
+            // Hide the User Details form
+            this.Hide();
+        }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            // Create a new instance of the fUser form
+            fSearch searchForm = new fSearch();
+            // Show the Search detail form
+            searchForm.Show();
+
+            // Hide the Search form
+            this.Hide();
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Go back to Lend Form
+            fLend lendForm = new fLend();
+            lendForm.Show();
+
+            // Hide the User Details form
+            this.Hide();
+        }
+    }
+}
+
+
+
+
+
+//search.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace FinalProject
+{
+    public partial class fSearch : Form
+    {
+        public fSearch()
+        {
+            InitializeComponent();
+        }
+
+        private void fSearch_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnQuery_Click(object sender, EventArgs e)
+        {
+            string usernameID = txtUsernameID.Text;
+
+            // Retrieve the roleID from the database based on the provided usernameID
+            int roleID = GetRoleIDFromDatabase(usernameID);
+
+            if (roleID != 1)
+            {
+                // Query the data for roleID 1 (Librarian) and display it in the data grid view
+                string query = $"SELECT userID, userName, Address FROM Users WHERE userID = '{usernameID}' OR userName = '{usernameID}'";
+
+                using (SqlConnection connection = new SqlConnection(@"Data Source=localhost; Initial Catalog=DIPLOMA; Persist Security Info=True; User ID=sa; Password=1Secure*Password1"))
+                {
+                    try
+                    {
+                        // Open the connection
+                        connection.Open();
+
+                        // Create a SqlCommand object with the query and connection
+                        using (SqlCommand command = new SqlCommand(query, connection))
+                        {
+                            // Create a DataTable to hold the query results
+                            DataTable dt = new DataTable();
+                            dt.Load(command.ExecuteReader());
+
+                            // Display the results in the data grid view
+                            dgQuery.DataSource = dt;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("An error occurred: " + ex.Message);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("The menu only shows lender details");
+            }
+        }
+
+        private int GetRoleIDFromDatabase(string usernameID)
+        {
+            int roleID = 0;
+
+            string query = $"SELECT roleID FROM Users WHERE userID = '{usernameID}' OR userName = '{usernameID}'";
+
+            using (SqlConnection connection = new SqlConnection(@"Data Source=localhost; Initial Catalog=DIPLOMA; Persist Security Info=True; User ID=sa; Password=1Secure*Password1"))
+            {
+                connection.Open();
+                SqlCommand command = new SqlCommand(query, connection);
+                object result = command.ExecuteScalar();
+
+                if (result != null && int.TryParse(result.ToString(), out int parsedRoleID))
+                {
+                    roleID = parsedRoleID;
+                }
+            }
+
+            return roleID;
+        }
+
+        private void btnBack_Click(object sender, EventArgs e)
+        {
+            // Create a new instance of the fUserDetail form
+            fUserDetail userDetailForm = new fUserDetail();
+            // Show the User detail form
+            userDetailForm.Show();
+
+            // Hide the User Detail form
+            this.Hide();
+        }
+    }
+}
+
